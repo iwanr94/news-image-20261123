@@ -1,5 +1,7 @@
 """Draw the 23 November 2026 world-news front page (1024x1024).
 
+7 stories, newspaper (kertas koran) style: serif-bold headlines,
+clear one-line taglines, dark masthead with the date most prominent.
 Build tool only: renders entry.png locally with Pillow.
 The grader entrypoint is main.ts (Node stdlib), not this file.
 No network, no numpy. Verified stories only, per news-brief.txt.
@@ -22,10 +24,16 @@ CREAM = (253, 250, 240)
 
 SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 SANSB = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+SERIFB = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
 
 
 def font(n, bold=False):
     return ImageFont.truetype(SANSB if bold else SANS, n)
+
+
+def head_font(n):
+    """Serif-bold headline font, newspaper style."""
+    return ImageFont.truetype(SERIFB, n)
 
 
 def wrap(d, text, fnt, max_w):
@@ -56,29 +64,35 @@ def panel(d, x, y, w, h, accent):
 
 
 def title_block(d, x, y, w, title, accent):
-    """Title in up to 2 lines, bold, centred."""
-    lines = wrap(d, title, font(18, True), w - 12)[:2]
+    """Headline: serif-bold, big, centred, one line where possible.
+    Shrink from 20pt until the whole headline fits on one line."""
+    size = 20
+    while size > 17 and d.textlength(title, font=head_font(size)) > w - 12:
+        size -= 1
+    fnt = head_font(size)
+    lines = wrap(d, title, fnt, w - 12)[:2]
     yy = y
     for ln in lines:
-        centered(d, x + w // 2, yy, ln, INK, font(18, True))
-        yy += 22
+        centered(d, x + w // 2, yy, ln, INK, fnt)
+        yy += size + 6
     return yy
 
 
-def caption_block(d, x, y, w, text, max_lines=3):
-    lines = wrap(d, text, font(16), w - 16)[:max_lines]
+def caption_block(d, x, y, w, text, max_lines=2):
+    """Tagline: clear, larger, high-contrast, bold, max 2 short lines."""
+    lines = wrap(d, text, font(17, True), w - 16)[:max_lines]
     yy = y
     for ln in lines:
-        centered(d, x + w // 2, yy, ln, INK, font(16))
-        yy += 20
+        centered(d, x + w // 2, yy, ln, INK, font(17, True))
+        yy += 23
     return yy
 
 
 def draw_banner(d):
-    d.rectangle([0, 0, W, 96], fill=NAVY)
-    d.rectangle([0, 96, W, 102], fill=GOLD)
-    centered(d, W // 2, 12, "23 NOVEMBER 2026", WHITE, font(46, True))
-    centered(d, W // 2, 66, "W O R L D   N E W S", GOLD, font(18, True))
+    d.rectangle([0, 0, W, 100], fill=NAVY)
+    d.rectangle([0, 100, W, 106], fill=GOLD)
+    centered(d, W // 2, 8, "23 NOVEMBER 2026", WHITE, head_font(54))
+    centered(d, W // 2, 70, "W O R L D   N E W S", GOLD, font(20, True))
 
 
 def draw_lead(d, x, y, w, h):
@@ -113,11 +127,11 @@ def draw_lead(d, x, y, w, h):
     d.line([tx + 62, y + 180, tx + 128, y + 132], fill=NAVY, width=3)
     d.line([tx + 96, y + 156, tx + 96, y + 132], fill=NAVY, width=2)
     d.line([tx + 96, y + 156, tx + 118, y + 172], fill=NAVY, width=2)
-    # Labels, right side
+    # Labels, right side: big serif headline, clear bold tagline
     lx = x + 330
-    d.text((lx, y + 22), "COP31 TALKS FAIL", fill=RED, font=font(40, True))
-    d.text((lx, y + 78), "No deal without a fossil-fuel phase-out",
-           fill=INK, font=font(21))
+    d.text((lx, y + 20), "COP31 TALKS FAIL", fill=RED, font=head_font(46))
+    d.text((lx, y + 84), "No deal without a fossil-fuel phase-out",
+           fill=INK, font=font(23, True))
 
 
 def art_tanker(d, x, y, w):
@@ -214,6 +228,35 @@ def art_flags(d, x, y, w):
     d.line([cx + 2, y + 152, cx + 2, y + 176], fill=INK, width=2)
 
 
+def art_factory(d, x, y, w):
+    # Compact factory art kept below the headline (title ends ~y+40)
+    # and above the tagline (starts y+218).
+    bx = x + 52
+    # Smoke puffs above the chimney, clear of the headline
+    d.ellipse([bx + w - 168, y + 46, bx + w - 134, y + 80],
+              fill=(150, 150, 150))
+    d.ellipse([bx + w - 152, y + 62, bx + w - 114, y + 98],
+              fill=(170, 170, 170))
+    # Chimney
+    d.rectangle([bx + w - 150, y + 86, bx + w - 128, y + 196],
+                fill=(90, 90, 96))
+    # Flames over the roof
+    d.polygon([(bx + 30, y + 104), (bx + 48, y + 72), (bx + 66, y + 104)],
+              fill=(230, 120, 30))
+    d.polygon([(bx + 96, y + 104), (bx + 114, y + 76), (bx + 132, y + 104)],
+              fill=(240, 200, 60))
+    d.polygon([(bx + 150, y + 104), (bx + 166, y + 78), (bx + 182, y + 104)],
+              fill=(230, 120, 30))
+    # Building first, then the sawtooth roof on top of it
+    d.rectangle([bx, y + 104, bx + w - 104, y + 196], fill=(150, 120, 90))
+    d.polygon([(bx, y + 104), (bx + 30, y + 80), (bx + 60, y + 104),
+               (bx + 90, y + 80), (bx + 120, y + 104),
+               (bx + 150, y + 80), (bx + 180, y + 104)], fill=(120, 96, 72))
+    d.rectangle([bx + 14, y + 128, bx + 44, y + 158], fill=GOLD)
+    d.rectangle([bx + 62, y + 128, bx + 92, y + 158], fill=GOLD)
+    d.rectangle([bx + 110, y + 128, bx + 140, y + 158], fill=GOLD)
+
+
 STORIES = [
     ("TANKERS STRUCK IN HORMUZ",
      "Shipping attacks hit highest level of the war", art_tanker, BLUE),
@@ -225,6 +268,9 @@ STORIES = [
      "Mexico seizes FBI-wanted cartel boss", art_handcuffs, TEAL),
     ("TRUMP WANTS IRAN DEAL",
      "Permanent deal, no decision until 2027", art_flags, BLUE),
+    ("FACTORY FIRE IN INDONESIA",
+     "Bodies recovered after candy factory fire in Cikande",
+     art_factory, RED),
 ]
 
 
@@ -239,15 +285,12 @@ def main():
     img = Image.new("RGB", (W, H), PAPER)
     d = ImageDraw.Draw(img)
     draw_banner(d)
-    draw_lead(d, 16, 112, 992, 268)
-    # Row 1: three panels
-    for i, x in enumerate([16, 350, 684]):
-        title, tag, art, accent = STORIES[i]
-        draw_small(d, x, 392, 322, 296, title, tag, art, accent)
-    # Row 2: two wider panels
-    for j, x in enumerate([16, 518]):
-        title, tag, art, accent = STORIES[3 + j]
-        draw_small(d, x, 700, 490, 296, title, tag, art, accent)
+    draw_lead(d, 16, 114, 992, 258)
+    # Grid: 3 columns x 2 rows, all six remaining stories
+    for row, y in enumerate([384, 696]):
+        for i, x in enumerate([16, 350, 684]):
+            title, tag, art, accent = STORIES[row * 3 + i]
+            draw_small(d, x, y, 322, 300, title, tag, art, accent)
     img.save("entry.png")
     print("wrote entry.png", img.size, img.mode)
 
